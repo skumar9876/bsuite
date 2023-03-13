@@ -28,14 +28,17 @@ class DeepSeaMNIST(deep_sea.DeepSea):
         self._obs_shape = (28, 28, 2)
         self.label_to_image_dict = {}
         self.observation_space = {} 
-        
+
         # TODO: Hacky stuff here to add gym env components.
         self.observation_space['image'] = np.zeros((28, 28, 2))
-        self.action_space = ActionSpace(10)
+        self.observation_space['row_image'] = np.zeros((28, 28, 1))
+        self.observation_space['col_image'] = np.zeros((28, 28, 1))
         
+        self.action_space = ActionSpace(2)
+
         for label in range(10):
             self.label_to_image_dict[label] = images[
-                labels == label][0:1]
+                labels == label][0:2]
         
         super().__init__(size=size,
                          deterministic=deterministic,
@@ -45,14 +48,16 @@ class DeepSeaMNIST(deep_sea.DeepSea):
                          mapping_seed=mapping_seed)
            
     def _get_observation(self):
+        row_obs = np.zeros(shape=(28, 28), dtype=np.float32)
         obs = np.zeros(shape=self._obs_shape, dtype=np.float32)
 
         if self._row >= self._size:  # End of episode null observation
-            return obs
+            return {'image': obs, 'row_image': row_obs, 'col_image': row_obs, 
+                    'row': self._row, 'col': self._column}
 
-        row_image_ind = np.random.randint(1)
-        col_image_ind = np.random.randint(1)
-        
+        row_image_ind = 0
+        col_image_ind = 0
+
         row_obs = self.label_to_image_dict[self._row][row_image_ind]
         col_obs = self.label_to_image_dict[self._column][col_image_ind]
         
@@ -60,18 +65,19 @@ class DeepSeaMNIST(deep_sea.DeepSea):
             (row_obs[:, :, None], col_obs[:, :, None]), 
             axis=-1)
         
-        return {'image': obs}
+        return  {'image': obs, 'row_image': row_obs, 'col_image': row_obs, 
+                 'row': self._row, 'col': self._column}
     
     def observation_spec(self):
         return specs.Array(
             shape=self._obs_shape, dtype=np.float32, name='observation')
     
-    def _reset(self) -> dm_env.TimeStep:
-        x = super()._reset()
+    def reset(self) -> dm_env.TimeStep:
+        x = super().reset()
         return x.observation
-    
-    def _step(self, action: int) -> dm_env.TimeStep:
-        x = super()._step(action)
+
+    def step(self, action: int) -> dm_env.TimeStep:
+        x = super().step(action)
         done = False
         if self._row == self._size:
             done = True
