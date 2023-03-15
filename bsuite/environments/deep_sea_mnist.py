@@ -25,20 +25,29 @@ class DeepSeaMNIST(deep_sea.DeepSea):
                  mapping_seed: Optional[int] = None):
 
         (images, labels), _ = datasets.load_mnist()
-        self._obs_shape = (28, 28, 2)
+        self._obs_shape = (28, 28, 4)
         self.label_to_image_dict = {}
         self.observation_space = {} 
 
         # TODO: Hacky stuff here to add gym env components.
-        self.observation_space['image'] = np.zeros((28, 28, 2))
-        self.observation_space['row_image'] = np.zeros((28, 28, 1))
-        self.observation_space['col_image'] = np.zeros((28, 28, 1))
+        self.observation_space['image'] = np.zeros((28, 28, 4))
+        self.observation_space['row_image'] = np.zeros((28, 28, 2))
+        self.observation_space['col_image'] = np.zeros((28, 28, 2))
         
         self.action_space = ActionSpace(2)
 
-        for label in range(10):
-            self.label_to_image_dict[label] = images[
-                labels == label][0:2]
+        for label in range(99):
+            a = label // 10
+            b = label % 10
+            
+            first_digit_img = images[labels == a][0]
+            second_digit_img = images[labels == b][0]
+
+            img = np.concatenate(
+                (first_digit_img[:, :, None], second_digit_img[:, :, None]), 
+                axis=-1)
+
+            self.label_to_image_dict[label] = img
         
         super().__init__(size=size,
                          deterministic=deterministic,
@@ -48,22 +57,19 @@ class DeepSeaMNIST(deep_sea.DeepSea):
                          mapping_seed=mapping_seed)
            
     def _get_observation(self):
-        row_obs = np.zeros(shape=(28, 28), dtype=np.float32)
+        row_obs = np.zeros(shape=(28, 28, 2), dtype=np.float32)
         obs = np.zeros(shape=self._obs_shape, dtype=np.float32)
 
         if self._row >= self._size:  # End of episode null observation
             return {'image': obs, 'row_image': row_obs, 'col_image': row_obs, 
                     'row': self._row, 'col': self._column}
 
-        row_image_ind = 0
-        col_image_ind = 0
-
-        row_obs = self.label_to_image_dict[self._row][row_image_ind]
-        col_obs = self.label_to_image_dict[self._column][col_image_ind]
+        row_obs = self.label_to_image_dict[self._row]
+        col_obs = self.label_to_image_dict[self._column]
+o
+        obs = np.concatenate((row_obs, col_obs), axis=-1)
         
-        obs = np.concatenate(
-            (row_obs[:, :, None], col_obs[:, :, None]), 
-            axis=-1)
+        # import pdb; pdb.set_trace()
         
         return  {'image': obs, 'row_image': row_obs, 'col_image': row_obs, 
                  'row': self._row, 'col': self._column}
