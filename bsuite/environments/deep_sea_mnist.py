@@ -27,9 +27,8 @@ class DeepSeaMNIST(deep_sea.DeepSea):
         (images, labels), _ = datasets.load_mnist()
         self._obs_shape = (28, 28, 4)
         self.label_to_image_dict = {}
-        self.observation_space = {} 
 
-        # TODO: Hacky stuff here to add gym env components.
+        self.observation_space = {} 
         self.observation_space['image'] = np.zeros((28, 28, 4))
         self.observation_space['row_image'] = np.zeros((28, 28, 2))
         self.observation_space['col_image'] = np.zeros((28, 28, 2))
@@ -66,10 +65,8 @@ class DeepSeaMNIST(deep_sea.DeepSea):
 
         row_obs = self.label_to_image_dict[self._row]
         col_obs = self.label_to_image_dict[self._column]
-o
+
         obs = np.concatenate((row_obs, col_obs), axis=-1)
-        
-        # import pdb; pdb.set_trace()
         
         return  {'image': obs, 'row_image': row_obs, 'col_image': row_obs, 
                  'row': self._row, 'col': self._column}
@@ -84,7 +81,26 @@ o
 
     def step(self, action: int) -> dm_env.TimeStep:
         x = super().step(action)
+        reward = 0  # x.reward
+        
         done = False
-        if self._row == self._size:
+        if self._column == 0 and self._row == 4:
+            reward = 0.25
             done = True
-        return x.observation, x.reward, done, None
+        elif self._column == 0 and self._row == 8:
+           reward = 0.5
+           done = True
+        elif self._column == 0 and self._row == 12:
+            reward = 0.75
+            done = True   
+        elif self._column == self._size - 1 and self._row == self._size - 1:
+            reward = 1
+            done = True
+        elif self._row == self._size - 1:
+            done = True
+
+        # if done:
+        #     print(f'RETURN: {reward}')
+        #     print()
+
+        return x.observation, reward, done, None

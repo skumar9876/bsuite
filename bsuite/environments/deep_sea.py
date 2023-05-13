@@ -114,22 +114,26 @@ class DeepSea(base.Environment):
     return dm_env.restart(self._get_observation())
 
   def _step(self, action: int) -> dm_env.TimeStep:
+    
+    # print(self._row, self._column, action)
     reward = 0.
     action_right = action == self._action_mapping[self._row, self._column]
+    # print(action_right)
+    # print()
 
     # Reward calculation
     if self._column == self._size - 1 and action_right:
       reward += 1.
       self._denoised_return += 1.
-    if not self._deterministic:  # Noisy rewards on the 'end' of chain.
-      if self._row == self._size - 1 and self._column in [0, self._size - 1]:
-        reward += self._rng.randn()
+    # if not self._deterministic:  # Noisy rewards on the 'end' of chain.
+    #  if self._row == self._size - 1 and self._column in [0, self._size - 1]:
+    #    reward += self._rng.randn()
 
     # Transition dynamics
     if action_right:
       if self._rng.rand() > 1 / self._size or self._deterministic:
         self._column = np.clip(self._column + 1, 0, self._size - 1)
-      reward -= self._unscaled_move_cost / self._size
+      # reward -= self._unscaled_move_cost / self._size
     else:
       if self._row == self._column:  # You were on the right path and went wrong
         self._bad_episode = True
